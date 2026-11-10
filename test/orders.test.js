@@ -62,24 +62,30 @@ test('sell reasons name the rule that fired', () => {
 });
 
 test('a dip fallback sell names the slot rule, not a recovered 20-day SMA', () => {
-  const text = reasonFor({
-    book: 'dip',
-    symbol: 'NVDA',
-    side: 'sell',
-    slotKind: 'fallback',
-    close: 168.89,
-    sma20: 206.18,
-    sma200: 150,
-    entrySession: '2026-10-13',
-    fallbackRank: 1,
-    pairedSymbol: 'DDOG',
-  });
-  assert.match(text, /Sell NVDA to free a slot/);
-  assert.match(text, /entered on 2026-10-13/);
-  assert.match(text, /ranks 1 on the fallback list/);
-  assert.match(text, /funds the buy of DDOG/);
-  assert.doesNotMatch(text, /back above the 20-day SMA/);
-  assert.doesNotMatch(text, /recovered holding/);
+  const cases = [
+    { symbol: 'NVDA', close: 168.89, sma20: 206.18, fallbackRank: 1 },
+    { symbol: 'SNDK', close: 1126.52, sma20: 1360.61, fallbackRank: 2 },
+  ];
+  for (const row of cases) {
+    const text = reasonFor({
+      book: 'dip',
+      symbol: row.symbol,
+      side: 'sell',
+      slotKind: 'fallback',
+      close: row.close,
+      sma20: row.sma20,
+      sma200: 150,
+      entrySession: '2026-10-13',
+      fallbackRank: row.fallbackRank,
+      pairedSymbol: 'DDOG',
+    });
+    assert.match(text, new RegExp(`Sell ${row.symbol} to free a slot`));
+    assert.match(text, /entered on 2026-10-13/);
+    assert.match(text, new RegExp(`ranks ${row.fallbackRank} on the fallback list`));
+    assert.match(text, /funds the buy of DDOG/);
+    assert.doesNotMatch(text, /back above the 20-day SMA/);
+    assert.doesNotMatch(text, /recovered holding/);
+  }
 });
 
 test('a recovered dip sell does not claim the close is above the 20-day SMA when it is not', () => {
