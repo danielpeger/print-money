@@ -30,6 +30,7 @@ test('sell reasons name the rule that fired', () => {
     book: 'dip',
     symbol: 'AAPL',
     side: 'sell',
+    slotKind: 'signal',
     exitRule: 'dip_repaired',
     close: 210,
     sma20: 205,
@@ -58,6 +59,43 @@ test('sell reasons name the rule that fired', () => {
   assert.match(trend, /stronger 12-to-1 momentum/);
   assert.match(trend, /oldest weaker Trend holding/);
   assert.match(trend, /already failed on the prior session/);
+});
+
+test('a dip fallback sell names the slot rule, not a recovered 20-day SMA', () => {
+  const text = reasonFor({
+    book: 'dip',
+    symbol: 'NVDA',
+    side: 'sell',
+    slotKind: 'fallback',
+    close: 168.89,
+    sma20: 206.18,
+    sma200: 150,
+    entrySession: '2026-10-13',
+    fallbackRank: 1,
+    pairedSymbol: 'DDOG',
+  });
+  assert.match(text, /Sell NVDA to free a slot/);
+  assert.match(text, /entered on 2026-10-13/);
+  assert.match(text, /ranks 1 on the fallback list/);
+  assert.match(text, /funds the buy of DDOG/);
+  assert.doesNotMatch(text, /back above the 20-day SMA/);
+  assert.doesNotMatch(text, /recovered holding/);
+});
+
+test('a recovered dip sell does not claim the close is above the 20-day SMA when it is not', () => {
+  const text = reasonFor({
+    book: 'dip',
+    symbol: 'NVDA',
+    side: 'sell',
+    slotKind: 'signal',
+    exitRule: 'dip_repaired',
+    close: 168.89,
+    sma20: 206.18,
+    holdingSessions: 20,
+    pairedSymbol: 'DDOG',
+  });
+  assert.match(text, /not above the 20-day SMA 206.18/);
+  assert.doesNotMatch(text, /back above the 20-day SMA/);
 });
 
 test('spread cost matches the side formula and rejects a wrong stored value', () => {
