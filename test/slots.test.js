@@ -87,7 +87,9 @@ test('a new signal sells the longest-held fallback, and a tie sells the later ra
   });
   assert.deepEqual(names(plan, 'sell'), ['LATER']);
   assert.deepEqual(names(plan, 'buy'), ['HOT']);
-  assert.equal(plan.orders.find((order) => order.symbol === 'LATER').pairedSymbol, 'HOT');
+  const sold = plan.orders.find((order) => order.symbol === 'LATER');
+  assert.equal(sold.pairedSymbol, 'HOT');
+  assert.match(sold.reason, /free a slot/);
 });
 
 test('a held Trend name that no longer qualifies stays until a new trend needs the slot', () => {
@@ -269,7 +271,9 @@ test('a repaired dip stays until a stronger new dip needs the slot', () => {
   });
   assert.deepEqual(names(withNew, 'sell'), ['OLD']);
   assert.deepEqual(names(withNew, 'buy'), ['HOT']);
-  assert.equal(withNew.orders.find((order) => order.symbol === 'OLD').exitRule, 'dip_repaired');
+  const sold = withNew.orders.find((order) => order.symbol === 'OLD');
+  assert.equal(sold.exitRule, 'dip_repaired');
+  assert.match(sold.reason, /back above the 20-day SMA 11.00/);
 });
 
 test('a one-session dip on a held fallback does not promote and can yield to a two-session dip', () => {
@@ -298,6 +302,10 @@ test('a one-session dip on a held fallback does not promote and can yield to a t
   assert.deepEqual(names(plan, 'buy'), ['HOT']);
   assert.equal(plan.target[0].symbol, 'HOT');
   assert.equal(plan.target[0].slotKind, 'signal');
+  const sold = plan.orders.find((order) => order.side === 'sell');
+  assert.equal(sold.slotKind, 'fallback');
+  assert.match(sold.reason, /free a slot/);
+  assert.doesNotMatch(sold.reason, /back above the 20-day SMA/);
 });
 
 test('a two-session dip on a held fallback promotes and is not sold for a stronger new dip', () => {
